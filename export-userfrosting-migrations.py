@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # MySQL Workbench module
-# A MySQL Workbench plugin which exports a Model to Laravel 5 Migrations
+# A MySQL Workbench plugin which exports a Model to UserFrosting Migrations
 # Written in MySQL Workbench 6.3.6
 
 import cStringIO
@@ -16,7 +16,7 @@ from wb import DefineModule, wbinputs
 from workbench.ui import WizardForm, WizardPage
 from mforms import newButton, newCodeEditor, FileChooser
 
-ModuleInfo = DefineModule(name='GenerateLaravel5Migration', author='Brandon Eckenrode', version='0.1.5')
+ModuleInfo = DefineModule(name='GenerateUserFrostingMigration', author='Louis Charette && Brandon Eckenrode', version='0.0.1')
 migrations = {}
 migration_tables = []
 
@@ -98,8 +98,11 @@ typesDict = {
 
 migrationTemplate = '''<?php
 
+namespace UserFrosting\Sprinkle\SprinkleName\Database\Migrations\\v100;
+
+use UserFrosting\System\Bakery\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Builder;
 
 class Create{tableNameCamelCase}Table extends Migration
 {{
@@ -110,10 +113,7 @@ class Create{tableNameCamelCase}Table extends Migration
     public $set_schema_table = '{tableName}';
 
     /**
-     * Run the migrations.
-     * @table {tableName}
-     *
-     * @return void
+     * @inheritDoc
      */
     public function up()
     {{
@@ -129,9 +129,7 @@ foreignKeyTemplate = '''
 
 migrationDownTemplate = '''
     /**
-     * Reverse the migrations.
-     *
-     * @return void
+     * @inheritDoc
      */
      public function down()
      {
@@ -151,13 +149,13 @@ migrationEndingTemplate = '''       Schema::dropIfExists($this->set_schema_table
 '''
 
 
-@ModuleInfo.plugin('wb.util.generate_laravel5_migration',
-                   caption='Export Laravel 5 Migration',
+@ModuleInfo.plugin('wb.util.generate_userfrosting_migration',
+                   caption='Export UserFrosting Migration',
                    input=[wbinputs.currentCatalog()],
                    groups=['Catalog/Utilities', 'Menu/Catalog']
                    )
 @ModuleInfo.export(grt.INT, grt.classes.db_Catalog)
-def generate_laravel5_migration(cat):
+def generate_userfrosting_migration(cat):
     def create_tree(table_schema):
         tree = {}
         for tbl in sorted(table_schema.tables, key=lambda table: table.name):
@@ -483,18 +481,15 @@ def generate_laravel5_migration(cat):
             table_tree = create_tree(schema[0])
             migrations = export_schema(schema[0], table_tree)
 
-    except GenerateLaravel5MigrationError as e:
+    except GenerateUserFrostingMigrationError as e:
         Workbench.confirm(e.typ, e.message)
         return 1
 
     now = datetime.datetime.now()
     for name in sorted(migrations):
-        save_format = '{year}_{month}_{day}_{number}_create_{tableName}_table.php'.format(
-            year=now.strftime('%Y'),
-            month=now.strftime('%m'),
-            day=now.strftime('%d'),
-            number="".zfill(6),
-            tableName=migration_tables[name]
+        components = migration_tables[name].split('_')
+        save_format = 'Create{tableNameCamelCase}Table.php'.format(
+            tableNameCamelCase=("".join(x.title() for x in components[0:]))
         )
         out.write('Table name: {0}  Migration File: {1}\n\n'.format(migration_tables[name], save_format))
         out.write(''.join(migrations[name]))
@@ -503,13 +498,13 @@ def generate_laravel5_migration(cat):
     sql_text = out.getvalue()
     out.close()
 
-    wizard = GenerateLaravel5MigrationWizard(sql_text)
+    wizard = GenerateUserFrostingMigrationWizard(sql_text)
     wizard.run()
 
     return 0
 
 
-class GenerateLaravel5MigrationError(Exception):
+class GenerateUserFrostingMigrationError(Exception):
     def __init__(self, typ, message):
         self.typ = typ
         self.message = message
@@ -518,7 +513,7 @@ class GenerateLaravel5MigrationError(Exception):
         return repr(self.typ) + ': ' + repr(self.message)
 
 
-class GenerateLaravel5MigrationWizardPreviewPage(WizardPage):
+class GenerateUserFrostingMigrationWizardPreviewPage(WizardPage):
     def __init__(self, owner, sql_text):
         WizardPage.__init__(self, owner, 'Review Generated Migration(s)')
 
@@ -559,12 +554,9 @@ class GenerateLaravel5MigrationWizardPreviewPage(WizardPage):
                             f.write(''.join(migrations[key]))
 
                     if len(search) == 0:
-                        save_format = '{year}_{month}_{day}_{number}_create_{tableName}_table.php'.format(
-                            year=now.strftime('%Y'),
-                            month=now.strftime('%m'),
-                            day=now.strftime('%d'),
-                            number=str(i).zfill(6),
-                            tableName=migration_tables[key]
+                        components = migration_tables[key].split('_')
+                        save_format = 'Create{tableNameCamelCase}Table.php'.format(
+                            tableNameCamelCase=("".join(x.title() for x in components[0:]))
                         )
                         with open(path + "/" + save_format, 'w+') as f:
                             f.write(''.join(migrations[key]))
@@ -578,12 +570,12 @@ class GenerateLaravel5MigrationWizardPreviewPage(WizardPage):
                     )
 
 
-class GenerateLaravel5MigrationWizard(WizardForm):
+class GenerateUserFrostingMigrationWizard(WizardForm):
     def __init__(self, sql_text):
         WizardForm.__init__(self, None)
 
-        self.set_name('generate_laravel_5_migration_wizard')
-        self.set_title('Generate Laravel 5 Migration Wizard')
+        self.set_name('generate_userfrosting_migration_wizard')
+        self.set_title('Generate UserFrosting Migration Wizard')
 
-        self.preview_page = GenerateLaravel5MigrationWizardPreviewPage(self, sql_text)
+        self.preview_page = GenerateUserFrostingMigrationWizardPreviewPage(self, sql_text)
         self.add_page(self.preview_page)
